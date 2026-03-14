@@ -1,0 +1,11 @@
+requests
+beautifulsoup4
+fake-useragent
+pandas
+geopy
+python-dotenv
+googlemaps
+fastapi
+uvicorn
+python-multipart
+

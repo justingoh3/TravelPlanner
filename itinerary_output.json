@@ -1,0 +1,87 @@
+{
+  "Day 1": [
+    {
+      "time": "14:00",
+      "type": "arrival"
+    },
+    {
+      "time": "14:06",
+      "type": "sight",
+      "name": "Shibuya Crossing",
+      "travel_duration": 0.1
+    },
+    {
+      "time": "15:59",
+      "type": "sight",
+      "name": "Harajuku",
+      "travel_duration": 0.4
+    },
+    {
+      "time": "17:55",
+      "type": "sight",
+      "name": "Meiji Shrine",
+      "travel_duration": 0.42
+    },
+    {
+      "time": "19:32",
+      "type": "meal",
+      "name": "Sushi Tokyo Ten、 Shibuya Ten",
+      "tabelog_score": 3.55,
+      "genre": "Sushi",
+      "district": "Shibuya",
+      "travel_duration": 0.11
+    }
+  ],
+  "Day 2": [
+    {
+      "time": "10:04",
+      "type": "sight",
+      "name": "Tokyo Tower",
+      "travel_duration": 1.07
+    },
+    {
+      "time": "12:17",
+      "type": "sight",
+      "name": "Tsukiji Outer Market",
+      "travel_duration": 0.72
+    },
+    {
+      "time": "13:48",
+      "type": "meal",
+      "name": "Yakiuo Ishikawa",
+      "tabelog_score": 3.67,
+      "genre": "Seafood, Yakiniku (Japanese BBQ), Sushi",
+      "district": null,
+      "travel_duration": 0.02
+    },
+    {
+      "time": "15:02",
+      "type": "sight",
+      "name": "Ginza",
+      "travel_duration": 0.23
+    }
+  ],
+  "Day 3": [
+    {
+      "time": "10:16",
+      "type": "sight",
+      "name": "Ueno Park",
+      "travel_duration": 1.27
+    },
+    {
+      "time": "12:22",
+      "type": "sight",
+      "name": "Senso-ji Temple",
+      "travel_duration": 0.6
+    },
+    {
+      "time": "14:29",
+      "type": "meal",
+      "name": "Tokyo Tonkatsu Gabuu",
+      "tabelog_score": 3.65,
+      "genre": "Tonkatsu (Pork cutlet), Deep-fried foods",
+      "district": "Ueno",
+      "travel_duration": 0.61
+    }
+  ]
+}
