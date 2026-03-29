@@ -151,6 +151,16 @@ class ItineraryEngine:
         """
         if not self.gmaps or not destinations:
             return []
+            
+        # Distance Matrix API requires a future departure_time for transit routing
+        now = datetime.now()
+        if departure_time < now:
+            days_diff = (now - departure_time).days
+            weeks_to_add = (days_diff // 7) + 1
+            future_departure_time = departure_time + timedelta(weeks=weeks_to_add)
+            if future_departure_time < now:
+                future_departure_time += timedelta(weeks=1)
+            departure_time = future_departure_time
         
         # Distance Matrix API allows max 25 destinations per request
         results = []
@@ -229,6 +239,19 @@ class ItineraryEngine:
             # Use provided departure time or current time
             if departure_time is None:
                 departure_time = datetime.now()
+                
+            # Google Maps Directions API requires a future departure_time for transit routing.
+            # If the calculated departure_time is in the past, shift it exactly forward by weeks
+            # to preserve the day-of-week and time-of-day for accurate transit schedules.
+            now = datetime.now()
+            if departure_time < now:
+                days_diff = (now - departure_time).days
+                weeks_to_add = (days_diff // 7) + 1
+                future_departure_time = departure_time + timedelta(weeks=weeks_to_add)
+                # Ensure it is definitely in the future (accounts for exact time of day)
+                if future_departure_time < now:
+                    future_departure_time += timedelta(weeks=1)
+                departure_time = future_departure_time
             
             transit_result = None
             walking_result = None
