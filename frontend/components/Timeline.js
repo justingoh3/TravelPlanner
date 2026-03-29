@@ -6,7 +6,9 @@ export function Timeline({ itinerary, hotelLocation, selectedDay, onDaySelect, o
     { value: 'temples_shrines', label: 'Temples & Shrines' },
     { value: 'anime_manga', label: 'Anime & Manga' },
     { value: 'nature_parks', label: 'Nature & Parks' },
-    { value: 'shopping', label: 'Shopping' },
+    { value: 'shopping', label: 'General Shopping' },
+    { value: 'clothes_shopping', label: 'Clothes Shopping' },
+    { value: 'cafe_hopping', label: 'Cafe Hopping' },
     { value: 'foodie', label: 'Foodie' },
     { value: 'history', label: 'History' }
   ]

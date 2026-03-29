@@ -34,6 +34,8 @@ INTEREST_MAP = {
     "anime_manga": {"keyword": "anime", "type": "store"},
     "nature_parks": {"type": "park"},
     "shopping": {"type": "shopping_mall"},
+    "clothes_shopping": {"type": "clothing_store", "keyword": "clothes"},
+    "cafe_hopping": {"type": "cafe"},
     "foodie": {"type": "restaurant"},
     "history": {"type": "museum", "keyword": "history"},
 }
