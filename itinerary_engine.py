@@ -813,8 +813,24 @@ class ItineraryEngine:
                     ordered = [recommendations[idx] for idx, _ in duration_pairs]
                     recommendations = ordered
             
-            logger.info(f"Found {len(recommendations)} high-quality recommendations near ({location_lat:.4f}, {location_lng:.4f})")
-            return recommendations[:3]
+            top_recs = recommendations[:3]
+            for rec in top_recs:
+                try:
+                    details = self.gmaps.place(rec['place_id'], fields=["url", "reviews", "formatted_phone_number", "website"])
+                    result_data = details.get('result', {})
+                    rec['url'] = result_data.get('url', '')
+                    rec['website'] = result_data.get('website', '')
+                    # Get top 3 review texts
+                    reviews = result_data.get('reviews', [])
+                    rec['reviews'] = [r.get('text', '') for r in reviews][:3]
+                except Exception as ex:
+                    logger.warning(f"Could not fetch details for {rec['name']}: {ex}")
+                    rec['url'] = ''
+                    rec['website'] = ''
+                    rec['reviews'] = []
+            
+            logger.info(f"Found {len(top_recs)} high-quality recommendations near ({location_lat:.4f}, {location_lng:.4f})")
+            return top_recs
             
         except Exception as e:
             logger.error(f"Error getting recommendations: {e}")
@@ -1224,7 +1240,12 @@ class ItineraryEngine:
                             "duration_text": travel_info.get('duration_text', travel_info['travel_text']),
                             "transit_line": travel_info.get('transit_line'),
                             "travel_mode": travel_info['mode'],
-                            "is_recommendation": True  # TASK 3: Mark as recommendation
+                            "is_recommendation": True,  # TASK 3: Mark as recommendation
+                            "rating": attraction.get('rating'),
+                            "user_ratings_total": attraction.get('user_ratings_total'),
+                            "url": attraction.get('url'),
+                            "website": attraction.get('website'),
+                            "reviews": attraction.get('reviews')
                         })
                         
                         current_lat = att_lat
@@ -1319,7 +1340,10 @@ class ItineraryEngine:
                     "travel_mode": travel_info['mode'],
                     "is_recommendation": True,  # TASK 3: Mark as recommendation
                     "rating": best_place.get('rating'),
-                    "user_ratings_total": best_place.get('user_ratings_total')
+                    "user_ratings_total": best_place.get('user_ratings_total'),
+                    "url": best_place.get('url'),
+                    "website": best_place.get('website'),
+                    "reviews": best_place.get('reviews')
                 })
                 
                 # Update location and tracking
