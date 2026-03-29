@@ -14,6 +14,7 @@ import googlemaps
 import os
 from dotenv import load_dotenv
 import random
+from weather import get_weather_forecast
 
 # Load environment variables
 load_dotenv()
@@ -962,6 +963,48 @@ class ItineraryEngine:
                 airport_lat, airport_lng = 35.7720, 140.3929
                 logger.info("Using default airport coordinates (Narita)")
         
+        # Weather-Aware Planning: assign clusters based on forecast
+        forecast = get_weather_forecast(self.hotel_lat, self.hotel_lng, self.arrival_datetime, self.num_days)
+        outdoor_keywords = ['park', 'garden', 'zoo', 'mountain', 'beach', 'shrine', 'temple', 'forest', 'lake', 'river', 'outdoor']
+        
+        # Score each cluster based on outdoor elements
+        cluster_scores = []
+        for i, c in enumerate(clusters):
+            score = sum(1 for (name, lat, lng) in c if any(kw in name.lower() for kw in outdoor_keywords))
+            cluster_scores.append({'index': i, 'outdoor_count': score, 'cluster': c})
+        
+        # Sort clusters by highest outdoor count first
+        cluster_scores.sort(key=lambda x: x['outdoor_count'], reverse=True)
+        
+        # We will assign clusters to days (1-indexed). 
+        # Create a list of days with their weather condition
+        day_info = []
+        for d in range(self.num_days):
+            date_str = (self.arrival_datetime + timedelta(days=d)).strftime('%Y-%m-%d')
+            weather_data = forecast.get(date_str, {'is_rainy': False})
+            day_info.append({'day_num': d + 1, 'is_rainy': weather_data['is_rainy'], 'assigned_cluster': None})
+            
+        # Try to assign high-outdoor clusters to non-rainy days first
+        # We want to map the sorted clusters to day_info.
+        for c_score in cluster_scores:
+            # Find an unassigned day. Prefer non-rainy if cluster has outdoor items.
+            if c_score['outdoor_count'] > 0:
+                best_day = next((d for d in day_info if not d['is_rainy'] and d['assigned_cluster'] is None), None)
+            else:
+                # If no outdoor items, prefer rainy days so outdoor days are saved, or just any day
+                best_day = next((d for d in day_info if d['is_rainy'] and d['assigned_cluster'] is None), None)
+            
+            # Fallback if no ideal day is found
+            if not best_day:
+                best_day = next((d for d in day_info if d['assigned_cluster'] is None), None)
+                
+            if best_day:
+                best_day['assigned_cluster'] = c_score['cluster']
+                
+        # Rebuild clusters list in day order
+        clusters = [d['assigned_cluster'] for d in day_info]
+        logger.info(f"Reordered clusters based on weather: {[f'Day {d[\"day_num\"]}: rainy={d[\"is_rainy\"]}' for d in day_info]}")
+
         # Process each day
         for day_num in range(1, self.num_days + 1):
             day_key = f"Day {day_num}"

@@ -115,6 +115,12 @@ class ItineraryResponse(BaseModel):
     message: str
 
 
+class RecalculateRequest(BaseModel):
+    hotel_address: str
+    arrival_time: str
+    itinerary: dict
+
+
 @app.get("/")
 async def root():
     """Health check endpoint."""
@@ -236,3 +242,31 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
+
+@app.post("/api/recalculate", response_model=ItineraryResponse)
+async def recalculate_itinerary(request: RecalculateRequest):
+    """
+    Recalculates travel times and timestamps for an edited itinerary.
+    Useful when a user drags/drops or swaps places between days.
+    """
+    try:
+        hotel_coords = geocode_address(request.hotel_address)
+        if not hotel_coords:
+            raise HTTPException(status_code=400, detail="Could not geocode hotel")
+        hotel_lat, hotel_lng = hotel_coords
+        
+        arrival_dt = datetime.fromisoformat(request.arrival_time.replace('Z', '+00:00'))
+        
+        # We can implement a lightweight function in itinerary_engine that just re-evaluates times
+        # For now, return a placeholder that just adjusts timestamps (assuming it's written in engine).
+        # engine = ItineraryEngine(hotel_lat, hotel_lng, arrival_dt, ...)
+        # new_itinerary = engine.recalculate(request.itinerary)
+        
+        return ItineraryResponse(
+            itinerary=request.itinerary,  # Currently just echoing until fully built
+            hotel_location={"latitude": hotel_lat, "longitude": hotel_lng, "address": request.hotel_address},
+            message="Recalculated travel times successfully (stub)"
+        )
+    except Exception as e:
+        logger.error(f"Error recalculating: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
