@@ -1003,7 +1003,8 @@ class ItineraryEngine:
                 
         # Rebuild clusters list in day order
         clusters = [d['assigned_cluster'] for d in day_info]
-        logger.info(f"Reordered clusters based on weather: {[f'Day {d[\"day_num\"]}: rainy={d[\"is_rainy\"]}' for d in day_info]}")
+        weather_log = [f"Day {d['day_num']}: rainy={d['is_rainy']}" for d in day_info]
+        logger.info(f"Reordered clusters based on weather: {weather_log}")
 
         # Process each day
         for day_num in range(1, self.num_days + 1):
@@ -1549,6 +1550,91 @@ class ItineraryEngine:
         
         return itinerary
 
+
+
+    def recalculate(self, itinerary: Dict) -> Dict:
+        """
+        Recalculates travel times and timestamps for a modified itinerary.
+        Preserves the order of activities but updates times based on Google Maps routing.
+        """
+        new_itinerary = {}
+        for day_key, day_events in itinerary.items():
+            if not day_events:
+                new_itinerary[day_key] = []
+                continue
+                
+            recalculated_events = []
+            
+            # Determine start time based on day number
+            try:
+                day_num = int(day_key.split(" ")[1])
+            except:
+                day_num = 1
+                
+            if day_num == 1:
+                current_time = self.arrival_datetime
+                if current_time.hour < self.active_hours_start:
+                    current_time = current_time.replace(hour=self.active_hours_start, minute=0, second=0)
+            else:
+                current_time = self.arrival_datetime.replace(hour=self.active_hours_start, minute=0, second=0)
+                current_time += timedelta(days=day_num - 1)
+                
+            current_lat = self.hotel_lat
+            current_lng = self.hotel_lng
+            
+            for i, event in enumerate(day_events):
+                event_type = event.get('type')
+                
+                # Arrival event just sets start time
+                if event_type == 'arrival':
+                    event['time'] = current_time.strftime("%H:%M")
+                    recalculated_events.append(event)
+                    continue
+                
+                dest_lat = event.get('latitude')
+                dest_lng = event.get('longitude')
+                
+                if not dest_lat or not dest_lng:
+                    # Skip or keep as is if no coordinates
+                    event['time'] = current_time.strftime("%H:%M")
+                    recalculated_events.append(event)
+                    continue
+                    
+                # Calculate travel time from current location
+                travel_info = self.get_travel_time(
+                    current_lat, current_lng, dest_lat, dest_lng,
+                    departure_time=current_time
+                )
+                
+                if travel_info:
+                    travel_hours = travel_info['travel_time_hours']
+                    current_time += timedelta(hours=travel_hours)
+                    
+                    # Update event with new travel info
+                    event['travel_time_seconds'] = travel_info['travel_time_seconds']
+                    event['travel_text'] = travel_info['travel_text']
+                    event['duration_text'] = travel_info.get('duration_text', travel_info['travel_text'])
+                    event['transit_line'] = travel_info.get('transit_line')
+                    event['travel_mode'] = travel_info['mode']
+                    
+                # Set arrival time for this event
+                event['time'] = current_time.strftime("%H:%M")
+                
+                # Update current location
+                current_lat = dest_lat
+                current_lng = dest_lng
+                
+                # Add duration of activity
+                if event_type == 'meal':
+                    current_time += timedelta(hours=self.meal_duration)
+                else:
+                    current_time += timedelta(hours=self.sightseeing_duration)
+                    
+                recalculated_events.append(event)
+                
+            new_itinerary[day_key] = recalculated_events
+            
+        return new_itinerary
 
 def generate_itinerary_json(hotel_lat: float, hotel_lng: float, arrival_datetime: datetime,
                             num_days: int, wishlist: List[str], tabelog_db: str) -> str:

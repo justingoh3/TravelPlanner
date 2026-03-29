@@ -24,6 +24,29 @@ export function Timeline({ itinerary, setItinerary, hotelLocation, selectedDay, 
 
   
 
+
+  const recalculateItinerary = async (updatedItinerary) => {
+    try {
+      const response = await fetch('http://localhost:8000/api/recalculate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          hotel_address: formData.hotel_address,
+          arrival_time: new Date(formData.arrival_time).toISOString(),
+          itinerary: updatedItinerary
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setItinerary(data.itinerary);
+      }
+    } catch (err) {
+      console.error("Failed to recalculate", err);
+    }
+  };
+
   const handleMoveDay = (event, sourceDay, destDay, index) => {
     if (sourceDay === destDay) return;
     const newItinerary = { ...itinerary };
@@ -39,6 +62,7 @@ export function Timeline({ itinerary, setItinerary, hotelLocation, selectedDay, 
     newItinerary[sourceDay] = sourceEvents;
     newItinerary[destDay] = destEvents;
     setItinerary(newItinerary);
+    recalculateItinerary(newItinerary);
   };
 
   const handleDragEnd = (result) => {
@@ -58,6 +82,7 @@ export function Timeline({ itinerary, setItinerary, hotelLocation, selectedDay, 
     
     newItinerary[selectedDay] = dayEvents;
     setItinerary(newItinerary);
+    recalculateItinerary(newItinerary);
   };
 
   const toggleInterest = (value) => {
