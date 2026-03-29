@@ -8,6 +8,10 @@ import logging
 from datetime import datetime
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException
+
+from fastapi.responses import Response
+from ics import Calendar, Event as IcsEvent
+
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -121,6 +125,11 @@ class RecalculateRequest(BaseModel):
     arrival_time: str
     itinerary: dict
     pacing: Optional[str] = "balanced"
+
+class ExportRequest(BaseModel):
+    hotel_address: str
+    arrival_time: str
+    itinerary: dict
 
 class SwapRequest(BaseModel):
     hotel_address: str
@@ -320,4 +329,85 @@ async def swap_itinerary_item(request: SwapRequest):
         )
     except Exception as e:
         logger.error(f"Error swapping: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/export")
+async def export_itinerary_ics(request: ExportRequest):
+    """
+    Generates an .ics file from the itinerary for Google Calendar / Apple Calendar.
+    """
+    try:
+        cal = Calendar()
+        
+        arrival_dt = datetime.fromisoformat(request.arrival_time.replace('Z', '+00:00'))
+        # Ensure we have a pure date context for incrementing days
+        base_date = arrival_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        for day_key, events in request.itinerary.items():
+            # e.g. "Day 1" -> 1
+            try:
+                day_num = int(day_key.replace("Day ", ""))
+            except:
+                day_num = 1
+                
+            day_date = base_date + timedelta(days=day_num - 1)
+            
+            for item in events:
+                if not item.get("time") or not item.get("name"):
+                    continue
+                    
+                # Parse "HH:MM"
+                time_str = item["time"]
+                try:
+                    hours, minutes = map(int, time_str.split(":"))
+                except:
+                    continue
+                    
+                start_time = day_date.replace(hour=hours, minute=minutes)
+                
+                # Default duration to 1 hour if not provided
+                duration_hours = float(item.get("duration_hours", 1.0))
+                end_time = start_time + timedelta(hours=duration_hours)
+                
+                e = IcsEvent()
+                
+                # Title formatting
+                prefix = ""
+                if item.get("type") == "meal":
+                    prefix = "🍽 "
+                elif item.get("type") == "arrival":
+                    prefix = "🛬 "
+                else:
+                    prefix = "📍 "
+                
+                e.name = f"{prefix}{item['name']}"
+                e.begin = start_time
+                e.end = end_time
+                
+                # Description
+                desc_lines = []
+                if item.get("is_recommendation"):
+                    desc_lines.append("✨ Suggested Activity")
+                    
+                if item.get("travel_text"):
+                    desc_lines.append(f"Transit: {item['travel_text']}")
+                    
+                if item.get("url"):
+                    desc_lines.append(f"Google Maps: {item['url']}")
+                    
+                e.description = "\n".join(desc_lines)
+                
+                cal.events.add(e)
+                
+        ics_content = str(cal)
+        return Response(
+            content=ics_content,
+            media_type="text/calendar",
+            headers={
+                "Content-Disposition": "attachment; filename=tokyo_itinerary.ics"
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error exporting to ICS: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -23,6 +23,36 @@ export default function Home() {
   const [viewMode, setViewMode] = useState('list') // 'list' or 'calendar'
   const [lastRequestData, setLastRequestData] = useState(null)
 
+  const handleExportICS = async () => {
+    if (!lastRequestData || !itinerary) return;
+    try {
+      const response = await fetch('http://localhost:8000/api/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          hotel_address: lastRequestData.hotel_address,
+          arrival_time: new Date(lastRequestData.arrival_time).toISOString(),
+          itinerary: itinerary
+        }),
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'tokyo_itinerary.ics';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error("Failed to export ICS", err);
+    }
+  };
+
   const handleSwap = async (dayKey, index) => {
     if (!lastRequestData) return;
     try {
@@ -121,7 +151,14 @@ export default function Home() {
               className={`flex-1 py-2 text-sm font-medium ${viewMode === 'calendar' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
               onClick={() => setViewMode('calendar')}
             >
-              Calendar View
+              Calendar
+            </button>
+            <button 
+              className={`flex-1 py-2 text-sm font-medium text-purple-600 hover:bg-purple-50 transition-colors`}
+              onClick={handleExportICS}
+              title="Export to Apple/Google Calendar"
+            >
+              📅 Export
             </button>
           </div>
         )}
