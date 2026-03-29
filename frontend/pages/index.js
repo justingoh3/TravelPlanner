@@ -53,6 +53,7 @@ export default function Home() {
       <div className="w-96 bg-white border-r border-gray-200 overflow-y-auto">
         <Timeline
           itinerary={itinerary}
+          setItinerary={setItinerary}
           hotelLocation={hotelLocation}
           selectedDay={selectedDay}
           onDaySelect={setSelectedDay}

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { MapPin, Coffee, Train, Plane, Clock } from 'lucide-react'
+import { MapPin, Coffee, Train, Plane, Clock, GripVertical } from 'lucide-react'
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 
-export function Timeline({ itinerary, hotelLocation, selectedDay, onDaySelect, onGenerate, loading, error }) {
+export function Timeline({ itinerary, setItinerary, hotelLocation, selectedDay, onDaySelect, onGenerate, loading, error }) {
   const INTEREST_OPTIONS = [
     { value: 'temples_shrines', label: 'Temples & Shrines' },
     { value: 'anime_manga', label: 'Anime & Manga' },
@@ -20,6 +21,44 @@ export function Timeline({ itinerary, hotelLocation, selectedDay, onDaySelect, o
     wishlist_items: 'Senso-ji Temple, Tokyo Skytree, Shibuya Crossing, Meiji Shrine, Tsukiji Outer Market',
     interests: []
   })
+
+  
+
+  const handleMoveDay = (event, sourceDay, destDay, index) => {
+    if (sourceDay === destDay) return;
+    const newItinerary = { ...itinerary };
+    const sourceEvents = Array.from(newItinerary[sourceDay]);
+    const destEvents = Array.from(newItinerary[destDay] || []);
+    
+    // Remove from source
+    const [movedItem] = sourceEvents.splice(index, 1);
+    
+    // Add to dest
+    destEvents.push(movedItem);
+    
+    newItinerary[sourceDay] = sourceEvents;
+    newItinerary[destDay] = destEvents;
+    setItinerary(newItinerary);
+  };
+
+  const handleDragEnd = (result) => {
+    if (!result.destination) return;
+    
+    const sourceIndex = result.source.index;
+    const destIndex = result.destination.index;
+    
+    if (sourceIndex === destIndex) return;
+    
+    const newItinerary = { ...itinerary };
+    const dayEvents = Array.from(newItinerary[selectedDay]);
+    
+    // Reorder
+    const [removed] = dayEvents.splice(sourceIndex, 1);
+    dayEvents.splice(destIndex, 0, removed);
+    
+    newItinerary[selectedDay] = dayEvents;
+    setItinerary(newItinerary);
+  };
 
   const toggleInterest = (value) => {
     setFormData(prev => ({
@@ -248,8 +287,15 @@ export function Timeline({ itinerary, hotelLocation, selectedDay, onDaySelect, o
 
       {/* Timeline for Selected Day */}
       {selectedDay && itinerary[selectedDay] && (
-        <div className="space-y-3">
-          {itinerary[selectedDay].map((event, index) => {
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId={selectedDay}>
+            {(provided) => (
+              <div
+                {...provided.droppableProps}
+                ref={provided.innerRef}
+                className="space-y-3"
+              >
+                {itinerary[selectedDay].map((event, index) => {
             const prevEvent = index > 0 ? itinerary[selectedDay][index - 1] : null
             const mapsLink = getGoogleMapsLink(event, prevEvent || (hotelLocation && {
               latitude: hotelLocation.latitude,
@@ -257,24 +303,44 @@ export function Timeline({ itinerary, hotelLocation, selectedDay, onDaySelect, o
             }))
 
             return (
-              <div
-                key={index}
-                className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="mt-1">{getIcon(event.type)}</div>
+              <Draggable key={`${event.name}-${index}`} draggableId={`${event.name}-${index}`} index={index}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.draggableProps}
+                    className={`border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow bg-white ${snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-500' : ''}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        {...provided.dragHandleProps}
+                        className="mt-1 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600"
+                      >
+                        <GripVertical className="w-5 h-5" />
+                      </div>
+                      <div className="mt-1">{getIcon(event.type)}</div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <Clock className="w-4 h-4 text-gray-500" />
                       <span className="text-sm font-medium text-gray-700">{event.time}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-gray-900">{event.name}</h3>
-                      {event.is_recommendation && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                          ✨ Suggested
-                        </span>
-                      )}
+                    <div className="flex items-center gap-2 justify-between">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-gray-900">{event.name}</h3>
+                        {event.is_recommendation && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            ✨ Suggested
+                          </span>
+                        )}
+                      </div>
+                      <select 
+                        className="text-xs border-gray-300 rounded p-1"
+                        value={selectedDay}
+                        onChange={(e) => handleMoveDay(event, selectedDay, e.target.value, index)}
+                      >
+                        {Object.keys(itinerary).map(day => (
+                          <option key={day} value={day}>Move to {day}</option>
+                        ))}
+                      </select>
                     </div>
                     
                     {event.type === 'meal' && event.tabelog_score && (
@@ -320,10 +386,16 @@ export function Timeline({ itinerary, hotelLocation, selectedDay, onDaySelect, o
                     )}
                   </div>
                 </div>
-              </div>
+                  </div>
+                )}
+              </Draggable>
             )
           })}
+          {provided.placeholder}
         </div>
+        )}
+        </Droppable>
+      </DragDropContext>
       )}
     </div>
   )
