@@ -8,6 +8,11 @@ const Map = dynamic(() => import('../components/Map').then(mod => ({ default: mo
 
 import { Timeline } from '../components/Timeline'
 
+const CalendarGrid = dynamic(() => import('../components/CalendarGrid').then(mod => ({ default: mod.CalendarGrid })), {
+  ssr: false
+})
+
+
 export default function Home() {
   const [itinerary, setItinerary] = useState(null)
   const [hotelLocation, setHotelLocation] = useState(null)
@@ -15,8 +20,34 @@ export default function Home() {
   const [error, setError] = useState(null)
   const [selectedDay, setSelectedDay] = useState(null)
   const [routeUrl, setRouteUrl] = useState(null)
+  const [viewMode, setViewMode] = useState('list') // 'list' or 'calendar'
+  const [lastRequestData, setLastRequestData] = useState(null)
+
+  const handleRecalculate = async (updatedItinerary) => {
+    if (!lastRequestData) return;
+    try {
+      const response = await fetch('http://localhost:8000/api/recalculate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          hotel_address: lastRequestData.hotel_address,
+          arrival_time: new Date(lastRequestData.arrival_time).toISOString(),
+          itinerary: updatedItinerary
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setItinerary(data.itinerary);
+      }
+    } catch (err) {
+      console.error("Failed to recalculate", err);
+    }
+  };
 
   const handleGenerate = async (formData) => {
+    setLastRequestData(formData)
     setLoading(true)
     setError(null)
     
@@ -49,18 +80,43 @@ export default function Home() {
 
   return (
     <div className="flex h-screen">
-      {/* Left Sidebar - Timeline */}
-      <div className="w-96 bg-white border-r border-gray-200 overflow-y-auto">
-        <Timeline
-          itinerary={itinerary}
-          setItinerary={setItinerary}
-          hotelLocation={hotelLocation}
-          selectedDay={selectedDay}
-          onDaySelect={setSelectedDay}
-          onGenerate={handleGenerate}
-          loading={loading}
-          error={error}
-        />
+            {/* Left Sidebar - Timeline */}
+      <div className="w-96 bg-white border-r border-gray-200 overflow-y-auto flex flex-col">
+        {itinerary && (
+          <div className="flex border-b border-gray-200">
+            <button 
+              className={`flex-1 py-2 text-sm font-medium ${viewMode === 'list' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+              onClick={() => setViewMode('list')}
+            >
+              List View
+            </button>
+            <button 
+              className={`flex-1 py-2 text-sm font-medium ${viewMode === 'calendar' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+              onClick={() => setViewMode('calendar')}
+            >
+              Calendar View
+            </button>
+          </div>
+        )}
+        {(!itinerary || viewMode === 'list') ? (
+          <Timeline
+            itinerary={itinerary}
+            setItinerary={setItinerary}
+            hotelLocation={hotelLocation}
+            selectedDay={selectedDay}
+            onDaySelect={setSelectedDay}
+            onGenerate={handleGenerate}
+            loading={loading}
+            error={error}
+          />
+        ) : (
+          <CalendarGrid 
+            itinerary={itinerary} 
+            setItinerary={setItinerary}
+            arrivalTime={lastRequestData ? new Date(lastRequestData.arrival_time).toISOString() : null}
+            onRecalculate={handleRecalculate}
+          />
+        )}
       </div>
 
       {/* Right Side - Map */}
