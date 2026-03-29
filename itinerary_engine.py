@@ -50,7 +50,8 @@ class ItineraryEngine:
     def __init__(self, hotel_lat: float, hotel_lng: float, arrival_datetime: datetime,
                  num_days: int, wishlist: List[str], tabelog_db: str,
                  departure_flight_time: Optional[datetime] = None,
-                 interests: Optional[List[str]] = None):
+                 interests: Optional[List[str]] = None,
+                 pacing: str = "balanced"):
         """
         Initialize the itinerary engine.
         
@@ -81,13 +82,23 @@ class ItineraryEngine:
         self.dinner_start = 18       # 18:00
         self.dinner_end = 20         # 20:00
         
-        # Activity durations (in hours)
-        self.sightseeing_duration = 1.5  # 1.5 hours per sight
-        self.meal_duration = 1.0         # 1 hour for meals
-        self.travel_buffer = 0.5          # 0.5 hours buffer between activities
+        # Set pacing settings
+        self.pacing = pacing
         
-        # Day capping - limit active time per day
-        self.max_active_hours_per_day = 8.0  # Maximum 8 hours of active time per day
+        if pacing == "relaxed":
+            self.sightseeing_duration = 2.0
+            self.meal_duration = 1.5
+            self.max_active_hours_per_day = 6.0
+        elif pacing == "packed":
+            self.sightseeing_duration = 1.0
+            self.meal_duration = 1.0
+            self.max_active_hours_per_day = 10.0
+        else: # balanced
+            self.sightseeing_duration = 1.5
+            self.meal_duration = 1.0
+            self.max_active_hours_per_day = 8.0
+            
+        self.travel_buffer = 0.5
         
         # Initialize geocoder and Google Maps client if API key available
         self.geocoder = None

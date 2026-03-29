@@ -36,7 +36,8 @@ export default function Home() {
           arrival_time: new Date(lastRequestData.arrival_time).toISOString(),
           itinerary: itinerary,
           day_key: dayKey,
-          item_index: index
+          item_index: index,
+          pacing: lastRequestData.pacing
         }),
       });
       if (response.ok) {
@@ -59,7 +60,8 @@ export default function Home() {
         body: JSON.stringify({
           hotel_address: lastRequestData.hotel_address,
           arrival_time: new Date(lastRequestData.arrival_time).toISOString(),
-          itinerary: updatedItinerary
+          itinerary: updatedItinerary,
+          pacing: lastRequestData.pacing
         }),
       });
       if (response.ok) {

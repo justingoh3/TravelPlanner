@@ -107,6 +107,7 @@ class ItineraryRequest(BaseModel):
     departure_flight_time: str  # ISO format: "2024-03-18T16:00:00" (REQUIRED for day calculation)
     wishlist_items: List[str]
     interests: Optional[List[str]] = []  # e.g. ['anime_manga', 'shopping']
+    pacing: Optional[str] = "balanced"  # 'relaxed', 'balanced', or 'packed'
 
 
 class ItineraryResponse(BaseModel):
@@ -119,6 +120,7 @@ class RecalculateRequest(BaseModel):
     hotel_address: str
     arrival_time: str
     itinerary: dict
+    pacing: Optional[str] = "balanced"
 
 class SwapRequest(BaseModel):
     hotel_address: str
@@ -126,6 +128,7 @@ class SwapRequest(BaseModel):
     itinerary: dict
     day_key: str
     item_index: int
+    pacing: Optional[str] = "balanced"
 
 
 
@@ -272,7 +275,8 @@ async def recalculate_itinerary(request: RecalculateRequest):
             arrival_datetime=arrival_dt,
             num_days=len(request.itinerary),
             wishlist=[],
-            tabelog_db="tabelog_japan.db"
+            tabelog_db="tabelog_japan.db",
+            pacing=request.pacing
         )
         
         new_itinerary = engine.recalculate(request.itinerary)
@@ -303,7 +307,8 @@ async def swap_itinerary_item(request: SwapRequest):
             arrival_datetime=arrival_dt,
             num_days=len(request.itinerary),
             wishlist=[],
-            tabelog_db="tabelog_japan.db"
+            tabelog_db="tabelog_japan.db",
+            pacing=request.pacing
         )
         
         new_itinerary = engine.swap_item(request.itinerary, request.day_key, request.item_index)

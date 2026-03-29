@@ -19,7 +19,8 @@ export function Timeline({ itinerary, setItinerary, hotelLocation, selectedDay, 
     arrival_time: new Date().toISOString().slice(0, 16),
     departure_flight_time: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16), // Default to 3 days later
     wishlist_items: 'Senso-ji Temple, Tokyo Skytree, Shibuya Crossing, Meiji Shrine, Tsukiji Outer Market',
-    interests: []
+    interests: [],
+    pacing: 'balanced'
   })
 
   
@@ -157,7 +158,8 @@ export function Timeline({ itinerary, setItinerary, hotelLocation, selectedDay, 
       arrival_time: new Date(formData.arrival_time).toISOString(),
       departure_flight_time: new Date(formData.departure_flight_time).toISOString(), // Required
       wishlist_items: wishlist,
-      interests: formData.interests || []
+      interests: formData.interests || [],
+      pacing: formData.pacing
     }
     
     onGenerate(requestData)
@@ -255,6 +257,21 @@ export function Timeline({ itinerary, setItinerary, hotelLocation, selectedDay, 
               ))}
             </div>
             <p className="mt-1 text-xs text-gray-500">We&apos;ll recommend places that match your interests</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Trip Pacing
+            </label>
+            <select
+              value={formData.pacing}
+              onChange={(e) => setFormData({...formData, pacing: e.target.value})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            >
+              <option value="relaxed">Relaxed (6 hrs/day, 2hr sights, 1.5hr meals)</option>
+              <option value="balanced">Balanced (8 hrs/day, 1.5hr sights, 1hr meals)</option>
+              <option value="packed">Packed (10 hrs/day, 1hr sights, 1hr meals)</option>
+            </select>
           </div>
 
           <div>
