@@ -1089,6 +1089,7 @@ class ItineraryEngine:
                                 "time": current_time.strftime("%H:%M"),
                                 "type": "meal",
                                 "name": restaurant['name'],
+                                "place_id": restaurant.get('place_id'),
                                 "tabelog_score": restaurant['tabelog_rating'],
                                 "genre": restaurant.get('genre'),
                                 "district": restaurant.get('district'),
@@ -1143,6 +1144,7 @@ class ItineraryEngine:
                                 "time": current_time.strftime("%H:%M"),
                                 "type": "meal",
                                 "name": restaurant['name'],
+                                "place_id": restaurant.get('place_id'),
                                 "tabelog_score": restaurant['tabelog_rating'],
                                 "genre": restaurant.get('genre'),
                                 "district": restaurant.get('district'),
@@ -1210,6 +1212,7 @@ class ItineraryEngine:
                             "name": name,
                             "latitude": lat,
                             "longitude": lng,
+                            "place_id": place_id,
                             "travel_time_seconds": travel_info['travel_time_seconds'],
                             "travel_text": travel_info['travel_text'],
                             "duration_text": travel_info.get('duration_text', travel_info['travel_text']),
@@ -1304,6 +1307,7 @@ class ItineraryEngine:
                             "name": att_name,
                             "latitude": att_lat,
                             "longitude": att_lng,
+                            "place_id": att_place_id,
                             "travel_time_seconds": travel_info['travel_time_seconds'],
                             "travel_text": travel_info['travel_text'],
                             "duration_text": travel_info.get('duration_text', travel_info['travel_text']),
@@ -1481,6 +1485,7 @@ class ItineraryEngine:
                                     "time": dinner_time.strftime("%H:%M"),
                                     "type": "meal",
                                     "name": restaurant['name'],
+                                    "place_id": restaurant.get('place_id'),
                                     "tabelog_score": restaurant['tabelog_rating'],
                                     "genre": restaurant.get('genre'),
                                     "district": restaurant.get('district'),
@@ -1548,7 +1553,8 @@ class ItineraryEngine:
         visited = len(self.wishlist) - len(unvisited)
         logger.info(f"\nItinerary complete: {total_events} total events, {visited}/{len(self.wishlist)} wishlist items visited")
         
-        return itinerary
+        # Finally, normalize and guarantee exact transit timings by running a recalculate pass
+        return self.recalculate(itinerary)
 
 
 
@@ -1624,12 +1630,22 @@ class ItineraryEngine:
                 current_lat = dest_lat
                 current_lng = dest_lng
                 
+                # Read dynamic duration or fall back to defaults
+                default_duration = self.meal_duration if event_type == 'meal' else self.sightseeing_duration
+                duration_hours = event.get('duration_hours', default_duration)
+                
+                # Check opening hours warning if we have place_id
+                place_id = event.get('place_id')
+                if place_id:
+                    is_open = self.is_place_open(place_id, current_time)
+                    event['is_closed_warning'] = not is_open
+                
                 # Add duration of activity
-                if event_type == 'meal':
-                    current_time += timedelta(hours=self.meal_duration)
-                else:
-                    current_time += timedelta(hours=self.sightseeing_duration)
-                    
+                current_time += timedelta(hours=duration_hours)
+                
+                # Track updated duration for the frontend
+                event['duration_hours'] = duration_hours
+                
                 recalculated_events.append(event)
                 
             new_itinerary[day_key] = recalculated_events
