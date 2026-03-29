@@ -1558,6 +1558,68 @@ class ItineraryEngine:
 
 
 
+
+    def swap_item(self, itinerary: Dict, day_key: str, item_index: int) -> Dict:
+        """
+        Swaps an item at day_key[item_index] with an alternative recommendation,
+        then recalculates the itinerary.
+        """
+        day_events = itinerary.get(day_key, [])
+        if not day_events or item_index >= len(day_events):
+            return itinerary
+            
+        event_to_swap = day_events[item_index]
+        
+        # Cannot swap arrival or transport
+        if event_to_swap.get('type') not in ['sight', 'meal']:
+            return itinerary
+        
+        search_lat = self.hotel_lat
+        search_lng = self.hotel_lng
+        
+        if item_index > 0:
+            prev_event = day_events[item_index - 1]
+            search_lat = prev_event.get('latitude', search_lat)
+            search_lng = prev_event.get('longitude', search_lng)
+            
+        visited_place_ids = set()
+        for day, events in itinerary.items():
+            for e in events:
+                if e.get('place_id'):
+                    visited_place_ids.add(e['place_id'])
+                    
+        if event_to_swap.get('place_id'):
+            visited_place_ids.add(event_to_swap['place_id'])
+            
+        if event_to_swap.get('type') == 'meal':
+            new_place = self.find_nearest_restaurant(search_lat, search_lng, "lunch", exclude_name=event_to_swap.get('name'))
+            if new_place:
+                event_to_swap['name'] = new_place['name']
+                event_to_swap['latitude'] = new_place['latitude']
+                event_to_swap['longitude'] = new_place['longitude']
+                event_to_swap['place_id'] = new_place.get('place_id')
+                event_to_swap['tabelog_score'] = new_place.get('tabelog_rating')
+                event_to_swap['genre'] = new_place.get('genre')
+        else:
+            recs = self.get_recommendations(search_lat, search_lng, visited_place_ids=visited_place_ids)
+            if recs:
+                best_place = recs[0]
+                event_to_swap['name'] = best_place['name']
+                event_to_swap['latitude'] = best_place['latitude']
+                event_to_swap['longitude'] = best_place['longitude']
+                event_to_swap['place_id'] = best_place['place_id']
+                event_to_swap['rating'] = best_place.get('rating')
+                event_to_swap['user_ratings_total'] = best_place.get('user_ratings_total')
+                event_to_swap['url'] = best_place.get('url')
+                event_to_swap['website'] = best_place.get('website')
+                event_to_swap['reviews'] = best_place.get('reviews')
+                event_to_swap['is_recommendation'] = True
+                
+        day_events[item_index] = event_to_swap
+        itinerary[day_key] = day_events
+        
+        return self.recalculate(itinerary)
+
     def recalculate(self, itinerary: Dict) -> Dict:
         """
         Recalculates travel times and timestamps for a modified itinerary.

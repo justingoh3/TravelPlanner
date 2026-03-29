@@ -120,6 +120,14 @@ class RecalculateRequest(BaseModel):
     arrival_time: str
     itinerary: dict
 
+class SwapRequest(BaseModel):
+    hotel_address: str
+    arrival_time: str
+    itinerary: dict
+    day_key: str
+    item_index: int
+
+
 
 @app.get("/")
 async def root():
@@ -276,4 +284,35 @@ async def recalculate_itinerary(request: RecalculateRequest):
         )
     except Exception as e:
         logger.error(f"Error recalculating: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/swap", response_model=ItineraryResponse)
+async def swap_itinerary_item(request: SwapRequest):
+    try:
+        hotel_coords = geocode_address(request.hotel_address)
+        if not hotel_coords:
+            raise HTTPException(status_code=400, detail="Could not geocode hotel")
+        hotel_lat, hotel_lng = hotel_coords
+        
+        arrival_dt = datetime.fromisoformat(request.arrival_time.replace('Z', '+00:00'))
+        
+        engine = ItineraryEngine(
+            hotel_lat=hotel_lat, 
+            hotel_lng=hotel_lng, 
+            arrival_datetime=arrival_dt,
+            num_days=len(request.itinerary),
+            wishlist=[],
+            tabelog_db="tabelog_japan.db"
+        )
+        
+        new_itinerary = engine.swap_item(request.itinerary, request.day_key, request.item_index)
+        
+        return ItineraryResponse(
+            itinerary=new_itinerary,
+            hotel_location={"latitude": hotel_lat, "longitude": hotel_lng, "address": request.hotel_address},
+            message="Swapped item successfully"
+        )
+    except Exception as e:
+        logger.error(f"Error swapping: {e}")
         raise HTTPException(status_code=500, detail=str(e))

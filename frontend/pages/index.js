@@ -23,6 +23,31 @@ export default function Home() {
   const [viewMode, setViewMode] = useState('list') // 'list' or 'calendar'
   const [lastRequestData, setLastRequestData] = useState(null)
 
+  const handleSwap = async (dayKey, index) => {
+    if (!lastRequestData) return;
+    try {
+      const response = await fetch('http://localhost:8000/api/swap', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          hotel_address: lastRequestData.hotel_address,
+          arrival_time: new Date(lastRequestData.arrival_time).toISOString(),
+          itinerary: itinerary,
+          day_key: dayKey,
+          item_index: index
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setItinerary(data.itinerary);
+      }
+    } catch (err) {
+      console.error("Failed to swap", err);
+    }
+  };
+
   const handleRecalculate = async (updatedItinerary) => {
     if (!lastRequestData) return;
     try {
@@ -108,6 +133,7 @@ export default function Home() {
             onGenerate={handleGenerate}
             loading={loading}
             error={error}
+            onSwap={handleSwap}
           />
         ) : (
           <CalendarGrid 

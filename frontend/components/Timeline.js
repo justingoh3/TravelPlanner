@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { MapPin, Coffee, Train, Plane, Clock, GripVertical } from 'lucide-react'
+import { MapPin, Coffee, Train, Plane, Clock, GripVertical, RefreshCw } from 'lucide-react'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 
-export function Timeline({ itinerary, setItinerary, hotelLocation, selectedDay, onDaySelect, onGenerate, loading, error }) {
+export function Timeline({ itinerary, setItinerary, hotelLocation, selectedDay, onDaySelect, onGenerate, loading, error, onSwap }) {
   const INTEREST_OPTIONS = [
     { value: 'temples_shrines', label: 'Temples & Shrines' },
     { value: 'anime_manga', label: 'Anime & Manga' },
@@ -357,15 +357,26 @@ export function Timeline({ itinerary, setItinerary, hotelLocation, selectedDay, 
                           </span>
                         )}
                       </div>
-                      <select 
-                        className="text-xs border-gray-300 rounded p-1"
-                        value={selectedDay}
-                        onChange={(e) => handleMoveDay(event, selectedDay, e.target.value, index)}
-                      >
-                        {Object.keys(itinerary).map(day => (
-                          <option key={day} value={day}>Move to {day}</option>
-                        ))}
-                      </select>
+                      <div className="flex items-center gap-2">
+                        {(event.is_recommendation || event.type === 'meal') && onSwap && (
+                          <button
+                            onClick={() => onSwap(selectedDay, index)}
+                            className="text-gray-400 hover:text-blue-500 transition-colors"
+                            title="Swap with another recommendation"
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                          </button>
+                        )}
+                        <select 
+                          className="text-xs border-gray-300 rounded p-1"
+                          value={selectedDay}
+                          onChange={(e) => handleMoveDay(event, selectedDay, e.target.value, index)}
+                        >
+                          {Object.keys(itinerary).map(day => (
+                            <option key={day} value={day}>Move to {day}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                     
                     {event.type === 'meal' && event.tabelog_score && (
